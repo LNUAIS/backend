@@ -5,8 +5,8 @@ import lombok.Data;
 //@Entity
 @Data
 public class User{
-    int id;
     String name;
+    String password;
     String email;
     String program;
     
@@ -18,11 +18,11 @@ public class User{
 
     Experience level;
 
-    public User(int id, String name, String email, String program, Experience level){
-       this.id = id;
-       this.name = name;
-       this.email = email;
-       this.program = program; 
-       this.level = level;
+    public User(String name, String password, String email, String program, Experience level){
+        this.name = name;
+        this.password = password;
+        this.email = email;
+        this.program = program; 
+        this.level = level;
     }   
 }
