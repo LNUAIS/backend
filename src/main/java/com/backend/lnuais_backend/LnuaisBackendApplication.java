@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class LnuaisBackendApplication {
 
 	public static void main(String[] args) {
+		System.out.println("Backend Server Running...");
 		SpringApplication.run(LnuaisBackendApplication.class, args);
 	}
 
