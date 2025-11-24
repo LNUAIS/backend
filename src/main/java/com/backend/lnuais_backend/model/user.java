@@ -24,6 +24,9 @@ public class User{
     String password;
     String email;
     String program;
+
+    private String verificationCode;
+    private boolean enabled;
     
     public enum Experience{
         LOW,
@@ -40,5 +43,6 @@ public class User{
         this.email = email;
         this.program = program; 
         this.level = level;
+        this.enabled = false;
     }   
 }

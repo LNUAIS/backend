@@ -6,7 +6,6 @@ import com.backend.lnuais_backend.services.UserService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Map;
 import java.util.Collections;
@@ -39,6 +38,21 @@ public class UserController {
         String email = loginData.get("email");
         String password = loginData.get("password");
         return userService.loginUser(email, password);
+    }
+
+    // NEW: Verify Endpoint
+    @PostMapping("/verify")
+    public String verifyAccount(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String code = payload.get("code");
+
+        boolean isVerified = userService.verifyUser(email, code);
+        
+        if (isVerified) {
+            return "Account verified successfully!";
+        } else {
+            throw new IllegalStateException("Invalid verification code.");
+        }
     }
 
     // GET: Get User Info (New)

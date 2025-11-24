@@ -33,7 +33,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/users/new_member", "/users/login").permitAll()
+                .requestMatchers("/", "/users/new_member", "/users/login", "/users/verify").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth -> oauth
@@ -42,7 +42,7 @@ public class SecurityConfig {
                     .oidcUserService(customOidcUserService) // Google/OIDC
                 )
                 // 2. IMPORTANT: Redirect to Dashboard after login success
-                .defaultSuccessUrl("http://localhost:3000/dashboard", true)
+                .defaultSuccessUrl("http://localhost:3000/dashboard.html", true)
             );
 
         return http.build();

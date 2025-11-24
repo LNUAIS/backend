@@ -5,63 +5,135 @@ import org.springframework.stereotype.Service;
 import com.backend.lnuais_backend.model.User;
 import com.backend.lnuais_backend.model.User.Experience;
 import com.backend.lnuais_backend.repository.UserRepository;
-import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class UserService {
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder; 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder){
+    private final EmailService emailService; // Add EmailService
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService){
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
-    // 1. Create User (Now with Hashing)
+    // 1. Create User (Updated with Verification Code)
     public void addUser(String name, String password, String email, String program, Experience experience){
-        if (userRepository.findByEmail(email) != null) {
-            throw new IllegalStateException("Email taken");
+        User existingUser = userRepository.findByEmail(email);
+
+        // A. If user exists AND is already verified, block them.
+        if (existingUser != null && existingUser.isEnabled()) {
+            throw new IllegalStateException("Email is already registered and verified. Please login.");
         }
-        // Hash the password before saving
-        String encodedPassword = passwordEncoder.encode(password);
-        
-        User user = new User(name, encodedPassword, email, program, experience);
+
+        // B. Setup the user object
+        User user;
+        if (existingUser != null) {
+            // Recycle the existing unverified row (Fixes the "Email Taken" bug)
+            user = existingUser;
+        } else {
+            // Create a brand new row
+            user = new User();
+            user.setEmail(email);
+        }
+
+        // C. Update/Set fields (Overwrites old data if retrying)
+        user.setName(name);
+        user.setProgram(program);
+        user.setLevel(experience);
+        user.setPassword(passwordEncoder.encode(password)); // Re-hash password
+        user.setEnabled(false); // Ensure it's locked until verified
+
+        // D. Generate NEW Code
+        String randomCode = String.valueOf(new Random().nextInt(900000) + 100000);
+        user.setVerificationCode(randomCode);
+
+        // E. Save and Send
         userRepository.save(user);
+        emailService.sendVerificationEmail(email, randomCode);
     }
 
-    // 2. Login Logic (New)
-    public User loginUser(String email, String rawPassword) {
+    // 2. Verify User
+    public boolean verifyUser(String email, String code) {
         User user = userRepository.findByEmail(email);
         
+        if (user == null) return false;
+
+        // Check if code matches (and make sure user isn't already verified)
+        if (user.getVerificationCode() != null && user.getVerificationCode().equals(code)) {
+            user.setEnabled(true); 
+            user.setVerificationCode(null); // Clear code
+            userRepository.save(user);
+            return true;
+        }
+        return false;
+    }
+
+
+    // 3. Login Logic (Updated to check if Enabled)
+public User loginUser(String email, String rawPassword) {
+    User user = userRepository.findByEmail(email);
+    
+    if (user == null) {
+        throw new IllegalStateException("User not found");
+    }
+
+    // 1. CHECK IF UNVERIFIED
+    if (!user.isEnabled()) {
+        // A. Generate a new code to be safe 
+        String newCode = String.valueOf(new Random().nextInt(900000) + 100000);
+        user.setVerificationCode(newCode);
+        userRepository.save(user);
+
+        // B. Resend the Email
+        emailService.sendVerificationEmail(email, newCode);
+
+        // C. Throw specific error for Frontend to catch
+        throw new IllegalStateException("UNVERIFIED_ACCOUNT"); 
+    }
+
+    if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+        throw new IllegalStateException("Invalid password");
+    }
+
+    return user;
+}
+
+    // 4. Reset Password By Email (New Request)
+    public void resetPasswordByEmail(String email, String newPassword) {
+        User user = userRepository.findByEmail(email);
+
         if (user == null) {
             throw new IllegalStateException("User not found");
         }
 
-        // Compare the raw password (from login form) with the hashed password (in DB)
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new IllegalStateException("Invalid password");
+        // Prevent Google users from resetting password
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            throw new IllegalStateException("Google accounts cannot reset passwords here.");
         }
 
-        return user; // Login successful
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
-    // 3. Get User Details (New)
+    // 5. Get User Details
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
     }
 
-    // 4. Change Password (Now with Hashing)
+    // 6. Change Password (LoggedIn)
     public void changePassword(Long userId, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
-
-        // Hash the NEW password
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
 
-    // 5. Delete User
+    // 7. Delete User
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
              throw new IllegalStateException("User not found");
