@@ -2,9 +2,9 @@ package com.backend.lnuais_backend.controller;
 
 import com.backend.lnuais_backend.model.User;
 import com.backend.lnuais_backend.services.UserService;
-import org.springframework.web.bind.annotation.*; 
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map; 
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -16,8 +16,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    // 1. Create User
-    // POST http://localhost:8080/users/new_member
+    // POST: Create Account
     @PostMapping("/new_member")
     public void addUser(@RequestBody User request){
         userService.addUser(
@@ -28,17 +27,30 @@ public class UserController {
             request.getLevel());
     }
 
-    // 2. Change Password
-    // PUT http://localhost:8080/users/{id}/change_password
+    // POST: Login (New)
+    // URL: http://localhost:8080/users/login
+    @PostMapping("/login")
+    public User login(@RequestBody Map<String, String> loginData) {
+        String email = loginData.get("email");
+        String password = loginData.get("password");
+        return userService.loginUser(email, password);
+    }
+
+    // GET: Get User Info (New)
+    // URL: http://localhost:8080/users/{id}
+    @GetMapping("/{id}")
+    public User getUser(@PathVariable Long id) {
+        return userService.getUserById(id);
+    }
+
+    // PUT: Change Password
     @PutMapping("/{id}/change_password")
     public void changePassword(@PathVariable Long id, @RequestBody Map<String, String> payload) {
-        // This allows you to send a JSON body like: { "password": "myNewPassword123" }
         String newPassword = payload.get("password");
         userService.changePassword(id, newPassword);
     }
 
-    // 3. Delete User
-    // DELETE http://localhost:8080/users/{id}
+    // DELETE: Delete Account
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
