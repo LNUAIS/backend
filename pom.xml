@@ -36,6 +36,7 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+
 		<!-- https://mvnrepository.com/artifact/org.apache.maven/maven-core -->
 		<dependency>
 			<groupId>org.apache.maven</groupId>
@@ -60,6 +61,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency> 
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-client</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
