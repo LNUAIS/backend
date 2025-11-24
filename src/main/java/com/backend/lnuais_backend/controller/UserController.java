@@ -2,9 +2,14 @@ package com.backend.lnuais_backend.controller;
 
 import com.backend.lnuais_backend.model.User;
 import com.backend.lnuais_backend.services.UserService;
+
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Map;
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/users")
@@ -54,5 +59,11 @@ public class UserController {
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
+    }
+
+    @GetMapping("/profile")
+    public Map<String, Object> userProfile(@AuthenticationPrincipal OAuth2User principal) {
+        if (principal == null) return Collections.emptyMap();
+        return principal.getAttributes();
     }
 }
