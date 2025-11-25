@@ -16,7 +16,7 @@ public class DataSeeder {
         return args -> {
             // Only add data if the table is empty
             if (eventRepository.count() == 0) {
-                System.out.println("🌱 Seeding Events Database...");
+                System.out.println(" Seeding Events Database...");
 
                 Event e1 = new Event(
                     "AI Workshop: Neural Networks",
@@ -37,7 +37,7 @@ public class DataSeeder {
                 eventRepository.save(e1);
                 eventRepository.save(e2);
                 
-                System.out.println("✅ Events added!");
+                System.out.println(" Events added!");
             }
         };
     }
