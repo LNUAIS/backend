@@ -72,6 +72,25 @@ public class UserService {
         return false;
     }
 
+    public User findUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+
+    public User updateUserProfile(Long userId, String program, Experience level) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalStateException("User not found"));
+
+    if (program != null && !program.isEmpty()) {
+        user.setProgram(program);
+    }
+    if (level != null) {
+        user.setLevel(level);
+    }
+    
+    return userRepository.save(user);
+}
+
 
     // 3. Login Logic (Updated to check if Enabled)
 public User loginUser(String email, String rawPassword) {
@@ -134,10 +153,23 @@ public User loginUser(String email, String rawPassword) {
     }
 
     // 7. Delete User
-    public void deleteUser(Long userId) {
-        if (!userRepository.existsById(userId)) {
-             throw new IllegalStateException("User not found");
+   public void deleteUser(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        // Case A: Google User (No password set in DB)
+        // We allow deletion immediately because they are authenticated via OAuth
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            userRepository.deleteById(userId);
+            return;
         }
+
+        // Case B: Normal User (Must verify password)
+        // If password is null/empty coming from frontend, block it
+        if (password == null || !passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalStateException("Incorrect password. Please try again.");
+        }
+
         userRepository.deleteById(userId);
     }
 }
