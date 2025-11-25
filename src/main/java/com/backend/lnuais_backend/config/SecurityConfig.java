@@ -4,6 +4,7 @@ import com.backend.lnuais_backend.services.CustomOAuth2UserService;
 import com.backend.lnuais_backend.services.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,33 +30,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // 1. Enable CORS using the bean defined below
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/users/new_member", "/users/login", "/users/verify").permitAll()
+                // 1. PUBLIC ENDPOINTS (Crucial: Login, Signup, Verify, Reset Pass)
+                .requestMatchers("/", "/users/new_member", "/users/login", "/users/verify", "/users/reset_password").permitAll()
+                
+                // 2. EVENTS: Everyone can VIEW events
+                .requestMatchers(HttpMethod.GET, "/events").permitAll()
+                
+                // 3. EVENTS: Only Logged-in users can Register/Unregister
+                .requestMatchers("/events/*/register/*", "/events/*/unregister/*").authenticated()
+                
+                // 4. EVERYTHING ELSE: Must be logged in
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth -> oauth
                 .userInfoEndpoint(info -> info
-                    .userService(customOAuth2UserService)   // GitHub/Standard
-                    .oidcUserService(customOidcUserService) // Google/OIDC
+                    .userService(customOAuth2UserService)
+                    .oidcUserService(customOidcUserService)
                 )
-                // 2. IMPORTANT: Redirect to Dashboard after login success
                 .defaultSuccessUrl("http://localhost:3000/dashboard.html", true)
             );
 
         return http.build();
     }
 
-    // 3. This Bean handles the CORS (The code you wanted to move)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Allow React
+        configuration.setAllowedOrigins(List.of("http://localhost:3000")); 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true); // Allow cookies/session
+        configuration.setAllowCredentials(true); 
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

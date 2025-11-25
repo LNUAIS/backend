@@ -7,6 +7,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import java.util.HashSet;
+import java.util.Set;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 @Data
 @NoArgsConstructor
-public class User{
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,22 +33,30 @@ public class User{
 
     private String verificationCode;
     private boolean enabled;
-    
-    public enum Experience{
+
+    public enum Experience {
         LOW,
         MID,
         HIGH
-    };
+    }
 
     @Enumerated(EnumType.STRING)
     Experience level;
 
-    public User(String name, String password, String email, String program, Experience level){
+    @ManyToMany
+    @JoinTable(
+        name = "user_events",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "event_id")
+    )
+    private Set<Event> registeredEvents = new HashSet<>();
+
+    public User(String name, String password, String email, String program, Experience level) {
         this.name = name;
         this.password = password;
         this.email = email;
-        this.program = program; 
+        this.program = program;
         this.level = level;
         this.enabled = false;
-    }   
+    }
 }
