@@ -7,12 +7,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.JoinColumn;
-import java.util.HashSet;
-import java.util.Set;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -26,11 +20,12 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    String name;
-    String password;
-    String email;
-    String program;
+    private String name;
+    private String password;
+    private String email;
+    private String program;
 
+    // Email Verification Fields
     private String verificationCode;
     private boolean enabled;
 
@@ -41,15 +36,7 @@ public class User {
     }
 
     @Enumerated(EnumType.STRING)
-    Experience level;
-
-    @ManyToMany
-    @JoinTable(
-        name = "user_events",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "event_id")
-    )
-    private Set<Event> registeredEvents = new HashSet<>();
+    private Experience level;
 
     public User(String name, String password, String email, String program, Experience level) {
         this.name = name;
@@ -57,6 +44,6 @@ public class User {
         this.email = email;
         this.program = program;
         this.level = level;
-        this.enabled = false;
+        this.enabled = false; // Default to unverified until they enter the code
     }
 }
