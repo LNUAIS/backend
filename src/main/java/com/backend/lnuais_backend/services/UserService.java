@@ -9,19 +9,19 @@ import java.util.Random;
 
 @Service
 public class UserService {
-    
+
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder; 
+    private final PasswordEncoder passwordEncoder;
     private final EmailService emailService; // Add EmailService
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService){
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
 
     // 1. Create User (Updated with Verification Code)
-    public void addUser(String name, String password, String email, String program, Experience experience){
+    public void addUser(String name, String password, String email, String program, Experience experience) {
         User existingUser = userRepository.findByEmail(email);
 
         // A. If user exists AND is already verified, block them.
@@ -59,12 +59,13 @@ public class UserService {
     // 2. Verify User
     public boolean verifyUser(String email, String code) {
         User user = userRepository.findByEmail(email);
-        
-        if (user == null) return false;
+
+        if (user == null)
+            return false;
 
         // Check if code matches (and make sure user isn't already verified)
         if (user.getVerificationCode() != null && user.getVerificationCode().equals(code)) {
-            user.setEnabled(true); 
+            user.setEnabled(true);
             user.setVerificationCode(null); // Clear code
             userRepository.save(user);
             return true;
@@ -76,50 +77,48 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
-
     public User updateUserProfile(Long userId, String program, Experience level) {
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalStateException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
 
-    if (program != null && !program.isEmpty()) {
-        user.setProgram(program);
-    }
-    if (level != null) {
-        user.setLevel(level);
-    }
-    
-    return userRepository.save(user);
-}
+        if (program != null && !program.isEmpty()) {
+            user.setProgram(program);
+        }
+        if (level != null) {
+            user.setLevel(level);
+        }
 
+        return userRepository.save(user);
+    }
 
     // 3. Login Logic (Updated to check if Enabled)
-public User loginUser(String email, String rawPassword) {
-    User user = userRepository.findByEmail(email);
-    
-    if (user == null) {
-        throw new IllegalStateException("User not found");
+    public User loginUser(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new IllegalStateException("User not found");
+        }
+
+        // 1. CHECK IF UNVERIFIED
+        if (!user.isEnabled()) {
+            // A. Generate a new code to be safe
+            String newCode = String.valueOf(new Random().nextInt(900000) + 100000);
+            user.setVerificationCode(newCode);
+            userRepository.save(user);
+
+            // B. Resend the Email
+            emailService.sendVerificationEmail(email, newCode);
+
+            // C. Throw specific error for Frontend to catch
+            throw new IllegalStateException("UNVERIFIED_ACCOUNT");
+        }
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new IllegalStateException("Invalid password");
+        }
+
+        return user;
     }
-
-    // 1. CHECK IF UNVERIFIED
-    if (!user.isEnabled()) {
-        // A. Generate a new code to be safe 
-        String newCode = String.valueOf(new Random().nextInt(900000) + 100000);
-        user.setVerificationCode(newCode);
-        userRepository.save(user);
-
-        // B. Resend the Email
-        emailService.sendVerificationEmail(email, newCode);
-
-        // C. Throw specific error for Frontend to catch
-        throw new IllegalStateException("UNVERIFIED_ACCOUNT"); 
-    }
-
-    if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-        throw new IllegalStateException("Invalid password");
-    }
-
-    return user;
-}
 
     // 4. Reset Password By Email (New Request)
     public void resetPasswordByEmail(String email, String newPassword) {
@@ -153,7 +152,7 @@ public User loginUser(String email, String rawPassword) {
     }
 
     // 7. Delete User
-   public void deleteUser(Long userId, String password) {
+    public void deleteUser(Long userId, String password) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
 
@@ -171,5 +170,52 @@ public User loginUser(String email, String rawPassword) {
         }
 
         userRepository.deleteById(userId);
+    }
+
+    // --- Password Reset Logic ---
+
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found with email: " + email);
+        }
+
+        // Generate 6-digit code
+        String code = String.valueOf((int) (Math.random() * 900000) + 100000);
+
+        user.setResetToken(code);
+        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        emailService.sendPasswordResetEmail(email, code);
+    }
+
+    public boolean verifyResetCode(String email, String code) {
+        User user = userRepository.findByEmail(email);
+        if (user == null)
+            return false;
+
+        if (user.getResetToken() == null || user.getResetTokenExpiry() == null) {
+            return false;
+        }
+        boolean matches = user.getResetToken().equals(code);
+        boolean notExpired = user.getResetTokenExpiry().isAfter(java.time.LocalDateTime.now());
+        return matches && notExpired;
+    }
+
+    public void resetPassword(String email, String code, String newPassword) {
+        if (!verifyResetCode(email, code)) {
+            throw new RuntimeException("Invalid or expired reset code.");
+        }
+
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
     }
 }

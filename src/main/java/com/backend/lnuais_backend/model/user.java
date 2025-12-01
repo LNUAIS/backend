@@ -29,6 +29,10 @@ public class User {
     private String verificationCode;
     private boolean enabled;
 
+    // Password Reset Fields
+    private String resetToken;
+    private java.time.LocalDateTime resetTokenExpiry;
+
     public enum Experience {
         LOW,
         MID,
